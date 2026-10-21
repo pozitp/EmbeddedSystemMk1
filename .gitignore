@@ -1,0 +1,19 @@
+/EmbeddedSystemMk2/
+
+# temporary simulator and editor files
+/.playwright-mcp/
+/.vscode/
+/.idea/
+*.log
+*.bak
+*~
+.DS_Store
+Thumbs.db
+
+# LaTeX build files
+*.aux
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc

@@ -1,0 +1,60 @@
+@startuml
+title Система управления доступом — вариант 2
+hide footbox
+skinparam defaultFontName SansSerif
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "Клавиатура\n4 × 3" as Keypad
+participant "Процессор\nSTM32C031C6" as CPU
+participant "SysTick" as Timer
+participant "TM1637\nи индикатор" as Display
+participant "LED\nPA9 / PA15" as LED
+participant "USART2\nи консоль" as Serial
+
+CPU -> CPU: Инициализация периферии\nlocked = 0, length = 0
+CPU -> Display: Очистить четыре разряда
+CPU -> LED: Зелёный включён, красный выключен
+CPU -> Serial: Сейф открыт, введите новый код
+
+loop Во время работы программы
+  Timer -> CPU: Прерывание примерно каждые 1 мс
+  CPU -> CPU: tickCount++
+  opt Прошло более 100 отсчётов после опроса
+    User -> Keypad: Нажать или отпустить клавишу
+    CPU -> Keypad: Поочерёдно активировать строки\nи прочитать столбцы через GPIO
+    Keypad --> CPU: Символ клавиши или отсутствие нажатия
+    CPU -> CPU: Обновить lastKey
+  end
+
+  opt lastKey изменился
+    alt Цифра и введено меньше четырёх цифр
+      CPU -> CPU: Добавить цифру в code
+      CPU -> Display: Передать адрес разряда\nи код сегментов по CLK/DIO
+    else Нажата *
+      CPU -> CPU: length = 0; состояние сейфа сохраняется
+      CPU -> Display: Очистить индикатор
+    else Нажата #
+      alt Введено не четыре цифры
+        CPU -> Serial: Enter 4 digits.
+      else Введены четыре цифры
+        alt Сейф открыт
+          CPU -> CPU: password = code; locked = 1
+          CPU -> LED: Красный включён, зелёный выключен
+          CPU -> Serial: Safe locked.
+        else Сейф закрыт и code совпадает с password
+          CPU -> CPU: locked = 0
+          CPU -> LED: Зелёный включён, красный выключен
+          CPU -> Serial: Safe open...
+        else Сейф закрыт и код неверный
+          CPU -> CPU: Сохранить код и закрытое состояние
+          CPU -> Serial: Wrong code. Safe locked.
+        end
+        CPU -> CPU: length = 0
+        CPU -> Display: Очистить индикатор
+      end
+    end
+  end
+end
+
+@enduml
